@@ -7,7 +7,6 @@ public class SaleItemDto
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal TotalPrice { get; set; }
-    public decimal DiscountPercentage { get; set; }
 }
 
 public class SaleItemResponseDto : SaleItemDto
@@ -23,9 +22,9 @@ public class CreateSaleDto
     public decimal DiscountAmount { get; set; }
     public decimal NetAmount { get; set; }
     public string PaymentMethod { get; set; } = string.Empty;
-    public string CustomerName { get; set; } = string.Empty;
-    public string CustomerPhone { get; set; } = string.Empty;
-    public string Notes { get; set; } = string.Empty;
+    public string? CustomerName { get; set; }
+    public string? CustomerPhone { get; set; }
+    public string? Notes { get; set; }
     public List<SaleItemDto> Items { get; set; } = new();
 }
 
@@ -37,9 +36,9 @@ public class SaleResponseDto
     public decimal DiscountAmount { get; set; }
     public decimal NetAmount { get; set; }
     public string PaymentMethod { get; set; } = string.Empty;
-    public string CustomerName { get; set; } = string.Empty;
-    public string CustomerPhone { get; set; } = string.Empty;
-    public string Notes { get; set; } = string.Empty;
+    public string? CustomerName { get; set; }
+    public string? CustomerPhone { get; set; }
+    public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<SaleItemResponseDto> Items { get; set; } = new();
 }

@@ -32,7 +32,7 @@ public class JwtTokenService : IJwtTokenService
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.Name, user.Email),
             new Claim(ClaimTypes.NameIdentifier, user.Id),
             new Claim("pharmacy_name", user.PharmacyName),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())

@@ -13,6 +13,7 @@ public class Drug : BaseEntity
     public int MinimumStock { get; set; }
     public DateTime ExpiryDate { get; set; }
     public string Manufacturer { get; set; } = string.Empty;
+    public string BatchNumber { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
     public string UserId { get; set; } = string.Empty;

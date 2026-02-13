@@ -47,7 +47,6 @@ public class AuthService : IAuthService
             {
                 Token = token,
                 UserId = user.Id,
-                Username = user.Username,
                 Email = user.Email,
                 PharmacyName = user.PharmacyName
             };

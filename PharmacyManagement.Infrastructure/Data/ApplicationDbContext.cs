@@ -26,9 +26,7 @@ public class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Email).IsUnique();
-            entity.HasIndex(e => e.Username).IsUnique();
             entity.Property(e => e.Email).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.Username).IsRequired().HasMaxLength(50);
             entity.Property(e => e.PharmacyName).HasMaxLength(200);
 
             entity.HasQueryFilter(e => !e.IsDeleted);
@@ -75,7 +73,6 @@ public class ApplicationDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
             entity.Property(e => e.TotalPrice).HasPrecision(18, 2);
-            entity.Property(e => e.DiscountPercentage).HasPrecision(5, 2);
 
             entity.HasOne(e => e.Sale)
                 .WithMany(s => s.SaleItems)
