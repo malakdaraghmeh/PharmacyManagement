@@ -23,75 +23,63 @@ public class SaleService : ISaleService
     {
         try
         {
-            // Wrap the entire transaction inside EF Core's execution strategy
-            var strategy = _unitOfWork.DbContext.Database.CreateExecutionStrategy();
-            return await strategy.ExecuteAsync(async () =>
+            await _unitOfWork.BeginTransactionAsync();
+
+            // Create sale
+            var sale = _mapper.Map<Sale>(saleDto);
+            sale.UserId = userId;
+            sale.InvoiceNumber = GenerateInvoiceNumber();
+
+            await _unitOfWork.Sales.AddAsync(sale);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Create sale items and update drug quantities
+            foreach (var itemDto in saleDto.Items)
             {
-                await _unitOfWork.BeginTransactionAsync();
-
-                try
-                {
-                    // Create sale
-                    var sale = _mapper.Map<Sale>(saleDto);
-                    sale.UserId = userId;
-                    sale.InvoiceNumber = GenerateInvoiceNumber();
-
-                    await _unitOfWork.Sales.AddAsync(sale);
-                    await _unitOfWork.SaveChangesAsync();
-
-                    // Create sale items and update drug quantities
-                    foreach (var itemDto in saleDto.Items)
-                    {
-                        var drug = await _unitOfWork.Drugs.GetByIdAsync(itemDto.DrugId);
-                        if (drug == null || drug.UserId != userId)
-                        {
-                            await _unitOfWork.RollbackTransactionAsync();
-                            throw new Exception($"Drug {itemDto.DrugName} not found");
-                        }
-
-                        if (drug.Quantity < itemDto.Quantity)
-                        {
-                            await _unitOfWork.RollbackTransactionAsync();
-                            throw new Exception($"Insufficient quantity for {itemDto.DrugName}");
-                        }
-
-                        // Update drug quantity
-                        drug.Quantity -= itemDto.Quantity;
-                        await _unitOfWork.Drugs.UpdateAsync(drug);
-
-                        // Create sale item
-                        var saleItem = _mapper.Map<SaleItem>(itemDto);
-                        saleItem.SaleId = sale.Id;
-                        await _unitOfWork.SaleItems.AddAsync(saleItem);
-
-                        // Check if stock is low
-                        if (drug.Quantity <= drug.MinimumStock)
-                        {
-                            await _notificationService.CreateNotificationAsync(
-                                userId,
-                                "Low Stock Alert",
-                                $"{drug.Name} is running low. Current quantity: {drug.Quantity}",
-                                "LowStock"
-                            );
-                        }
-                    }
-
-                    await _unitOfWork.SaveChangesAsync();
-                    await _unitOfWork.CommitTransactionAsync();
-
-                    var createdSale = await _unitOfWork.Sales.GetByIdWithItemsAsync(sale.Id);
-                    var response = _mapper.Map<SaleResponseDto>(createdSale);
-                    return ApiResponse<SaleResponseDto>.SuccessResponse(response, "Sale created successfully");
-                }
-                catch
+                var drug = await _unitOfWork.Drugs.GetByIdAsync(itemDto.DrugId);
+                if (drug == null || drug.UserId != userId)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    throw; // Let the execution strategy retry if transient
+                    return ApiResponse<SaleResponseDto>.ErrorResponse($"Drug {itemDto.DrugName} not found");
                 }
-            });
+
+                if (drug.Quantity < itemDto.Quantity)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return ApiResponse<SaleResponseDto>.ErrorResponse($"Insufficient quantity for {itemDto.DrugName}");
+                }
+
+                // Update drug quantity
+                drug.Quantity -= itemDto.Quantity;
+                await _unitOfWork.Drugs.UpdateAsync(drug);
+
+                // Create sale item
+                var saleItem = _mapper.Map<SaleItem>(itemDto);
+                saleItem.SaleId = sale.Id;
+                await _unitOfWork.SaleItems.AddAsync(saleItem);
+
+                // Check if stock is low
+                if (drug.Quantity <= drug.MinimumStock)
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        userId,
+                        "Low Stock Alert",
+                        $"{drug.Name} is running low. Current quantity: {drug.Quantity}",
+                        "LowStock"
+                    );
+                }
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
+
+            var createdSale = await _unitOfWork.Sales.GetByIdWithItemsAsync(sale.Id);
+            var response = _mapper.Map<SaleResponseDto>(createdSale);
+            return ApiResponse<SaleResponseDto>.SuccessResponse(response, "Sale created successfully");
         }
         catch (Exception ex)
         {
+            await _unitOfWork.RollbackTransactionAsync();
             return ApiResponse<SaleResponseDto>.ErrorResponse($"Failed to create sale: {ex.Message}");
         }
     }
