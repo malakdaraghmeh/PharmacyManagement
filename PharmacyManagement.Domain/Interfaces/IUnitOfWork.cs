@@ -9,7 +9,6 @@ public interface IUnitOfWork : IDisposable
     ICreditRecordRepository CreditRecords { get; }
     INotificationRepository Notifications { get; }
 
-     DbContext DbContext { get; } 
  
     Task<int> SaveChangesAsync();
     Task BeginTransactionAsync();
