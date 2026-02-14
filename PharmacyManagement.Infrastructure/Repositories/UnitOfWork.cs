@@ -1,147 +1,80 @@
-update all code using AutoMapper;
-using PharmacyManagement.Application.Common;
-using PharmacyManagement.Application.DTOs.Sale;
-using PharmacyManagement.Domain.Entities;
+using Microsoft.EntityFrameworkCore.Storage;
 using PharmacyManagement.Domain.Interfaces;
+using PharmacyManagement.Infrastructure.Data;
 
-namespace PharmacyManagement.Application.Services.Implementation;
+namespace PharmacyManagement.Infrastructure.Repositories;
 
-public class SaleService : ISaleService
+public class UnitOfWork : IUnitOfWork
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
-    private readonly INotificationService _notificationService;
+    private readonly ApplicationDbContext _context;
+    private IDbContextTransaction? _transaction;
 
-    public SaleService(IUnitOfWork unitOfWork, IMapper mapper, INotificationService notificationService)
+    public IUserRepository Users { get; }
+    public IDrugRepository Drugs { get; }
+    public ISaleRepository Sales { get; }
+    public ISaleItemRepository SaleItems { get; }
+    public ICreditRecordRepository CreditRecords { get; }
+    public INotificationRepository Notifications { get; }
+
+    public UnitOfWork(ApplicationDbContext context)
     {
-        _unitOfWork = unitOfWork;
-        _mapper = mapper;
-        _notificationService = notificationService;
+        _context = context;
+        Users = new UserRepository(_context);
+        Drugs = new DrugRepository(_context);
+        Sales = new SaleRepository(_context);
+        SaleItems = new SaleItemRepository(_context);
+        CreditRecords = new CreditRecordRepository(_context);
+        Notifications = new NotificationRepository(_context);
     }
 
-    public async Task<ApiResponse<SaleResponseDto>> CreateSaleAsync(CreateSaleDto saleDto, string userId)
+    public async Task<int> SaveChangesAsync()
+    {
+        return await _context.SaveChangesAsync();
+    }
+
+    public async Task BeginTransactionAsync()
+    {
+        _transaction = await _context.Database.BeginTransactionAsync();
+    }
+
+    public async Task CommitTransactionAsync()
     {
         try
         {
-            await _unitOfWork.BeginTransactionAsync();
-
-            // Create sale
-            var sale = _mapper.Map<Sale>(saleDto);
-            sale.UserId = userId;
-            sale.InvoiceNumber = GenerateInvoiceNumber();
-
-            await _unitOfWork.Sales.AddAsync(sale);
-            await _unitOfWork.SaveChangesAsync();
-
-            // Create sale items and update drug quantities
-            foreach (var itemDto in saleDto.Items)
+            await _context.SaveChangesAsync();
+            if (_transaction != null)
             {
-                var drug = await _unitOfWork.Drugs.GetByIdAsync(itemDto.DrugId);
-                if (drug == null || drug.UserId != userId)
-                {
-                    await _unitOfWork.RollbackTransactionAsync();
-                    return ApiResponse<SaleResponseDto>.ErrorResponse($"Drug {itemDto.DrugName} not found");
-                }
-
-                if (drug.Quantity < itemDto.Quantity)
-                {
-                    await _unitOfWork.RollbackTransactionAsync();
-                    return ApiResponse<SaleResponseDto>.ErrorResponse($"Insufficient quantity for {itemDto.DrugName}");
-                }
-
-                // Update drug quantity
-                drug.Quantity -= itemDto.Quantity;
-                await _unitOfWork.Drugs.UpdateAsync(drug);
-
-                // Create sale item
-                var saleItem = _mapper.Map<SaleItem>(itemDto);
-                saleItem.SaleId = sale.Id;
-                await _unitOfWork.SaleItems.AddAsync(saleItem);
-
-                // Check if stock is low
-                if (drug.Quantity <= drug.MinimumStock)
-                {
-                    await _notificationService.CreateNotificationAsync(
-                        userId,
-                        "Low Stock Alert",
-                        $"{drug.Name} is running low. Current quantity: {drug.Quantity}",
-                        "LowStock"
-                    );
-                }
+                await _transaction.CommitAsync();
             }
-
-            await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
-
-            var createdSale = await _unitOfWork.Sales.GetByIdWithItemsAsync(sale.Id);
-            var response = _mapper.Map<SaleResponseDto>(createdSale);
-            return ApiResponse<SaleResponseDto>.SuccessResponse(response, "Sale created successfully");
         }
-        catch (Exception ex)
+        catch
         {
-            await _unitOfWork.RollbackTransactionAsync();
-            return ApiResponse<SaleResponseDto>.ErrorResponse($"Failed to create sale: {ex.Message}");
+            await RollbackTransactionAsync();
+            throw;
         }
-    }
-
-    public async Task<ApiResponse<List<SaleResponseDto>>> GetAllSalesAsync(string userId)
-    {
-        try
+        finally
         {
-            var sales = await _unitOfWork.Sales.GetByUserIdAsync(userId);
-            var response = _mapper.Map<List<SaleResponseDto>>(sales);
-            return ApiResponse<List<SaleResponseDto>>.SuccessResponse(response);
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse<List<SaleResponseDto>>.ErrorResponse($"Failed to get sales: {ex.Message}");
-        }
-    }
-
-    public async Task<ApiResponse<SaleResponseDto>> GetSaleByIdAsync(string id, string userId)
-    {
-        try
-        {
-            var sale = await _unitOfWork.Sales.GetByIdWithItemsAsync(id);
-
-            if (sale == null || sale.UserId != userId)
+            if (_transaction != null)
             {
-                return ApiResponse<SaleResponseDto>.ErrorResponse("Sale not found");
+                await _transaction.DisposeAsync();
+                _transaction = null;
             }
-
-            var response = _mapper.Map<SaleResponseDto>(sale);
-            return ApiResponse<SaleResponseDto>.SuccessResponse(response);
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse<SaleResponseDto>.ErrorResponse($"Failed to get sale: {ex.Message}");
         }
     }
 
-    public async Task<ApiResponse<bool>> DeleteSaleAsync(string id, string userId)
+    public async Task RollbackTransactionAsync()
     {
-        try
+        if (_transaction != null)
         {
-            var sale = await _unitOfWork.Sales.GetByIdAsync(id);
-
-            if (sale == null || sale.UserId != userId)
-            {
-                return ApiResponse<bool>.ErrorResponse("Sale not found");
-            }
-
-            await _unitOfWork.Sales.DeleteAsync(id);
-            await _unitOfWork.SaveChangesAsync();
-
-            return ApiResponse<bool>.SuccessResponse(true, "Sale deleted successfully");
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse<bool>.ErrorResponse($"Failed to delete sale: {ex.Message}");
+            await _transaction.RollbackAsync();
+            await _transaction.DisposeAsync();
+            _transaction = null;
         }
     }
 
-    private string GenerateInvoiceNumber()
+    public void Dispose()
     {
-        return $"INV-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString()[..8].ToUpper()}";
+        _transaction?.Dispose();
+        _context.Dispose();
     }
 }
