@@ -1,4 +1,5 @@
-﻿using PharmacyManagement.Domain.Common;
+using PharmacyManagement.Domain.Common;
+using PharmacyManagement.Domain.Common.Enums;
 
 namespace PharmacyManagement.Domain.Entities;
 
@@ -10,10 +11,11 @@ public class CreditRecord : BaseEntity
     public decimal PaidAmount { get; set; }
     public decimal RemainingAmount { get; set; }
     public DateTime DueDate { get; set; }
-    public string Status { get; set; } = "Pending"; // Pending, Paid, Overdue
+    // public string Status { get; set; } = "Pending"; // Pending, Paid, Overdue
+    public CreditStatus Status { get; set; } = CreditStatus.Pending;
     public string Notes { get; set; } = string.Empty;
     public string UserId { get; set; } = string.Empty;
-
+    public TransactionType Type { get; set; } = TransactionType.Credit;
     // Navigation properties
     public User User { get; set; } = null!;
 }
