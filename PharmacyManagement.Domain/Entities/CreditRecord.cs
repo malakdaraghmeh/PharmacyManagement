@@ -1,4 +1,5 @@
-using PharmacyManagement.Domain.Common;
+﻿
+﻿using PharmacyManagement.Domain.Common;
 using PharmacyManagement.Domain.Common.Enums;
 
 namespace PharmacyManagement.Domain.Entities;

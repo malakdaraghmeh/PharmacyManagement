@@ -1,4 +1,4 @@
-using PharmacyManagement.Domain.Common.Enums;
+﻿using PharmacyManagement.Domain.Common.Enums;
 namespace PharmacyManagement.Application.DTOs.CreditRecord;
 
 public class CreditRecordDto
