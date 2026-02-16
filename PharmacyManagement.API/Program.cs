@@ -10,12 +10,25 @@ using PharmacyManagement.Infrastructure.Data;
 using PharmacyManagement.Infrastructure.Repositories;
 using PharmacyManagement.Infrastructure.Services;
 using System.Text;
+using System.Text.Json.Serialization;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
-builder.Services.AddControllers();
+// builder.Services.AddControllers();
+// builder.Services.AddEndpointsApiExplorer();
+
+// Add services to the container
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
 builder.Services.AddEndpointsApiExplorer();
+
 
 // Swagger Configuration - FIXED
 builder.Services.AddSwaggerGen(options =>
