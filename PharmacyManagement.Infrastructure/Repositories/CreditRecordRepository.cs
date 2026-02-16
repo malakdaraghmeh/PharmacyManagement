@@ -23,7 +23,7 @@ public class CreditRecordRepository : GenericRepository<CreditRecord>, ICreditRe
         return await _dbSet
             .Where(cr => cr.UserId == userId &&
                         cr.DueDate < today &&
-                        cr.Status != "Paid")
+                        cr.Status != CreditStatus.Paid)
             .ToListAsync();
     }
 }
