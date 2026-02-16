@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.Domain.Entities;
+using PharmacyManagement.Domain.Entities.Enums;
 using PharmacyManagement.Domain.Interfaces;
 using PharmacyManagement.Infrastructure.Data;
 
