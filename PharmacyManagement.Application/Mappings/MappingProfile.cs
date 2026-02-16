@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using PharmacyManagement.Domain.Entities;
 using PharmacyManagement.Application.DTOs.Auth;
 using PharmacyManagement.Application.DTOs.Drug;
@@ -33,8 +33,9 @@ namespace PharmacyManagement.Application.Mappings
             CreateMap<SaleItem, SaleItemResponseDto>();
 
             // CreditRecord mappings
-            CreateMap<CreditRecordDto, CreditRecord>();
+            CreateMap<CreditRecord, CreditRecordDto>().ReverseMap();
             CreateMap<CreditRecord, CreditRecordResponseDto>();
+
 
             // Notification mappings
             CreateMap<Notification, NotificationResponseDto>()
