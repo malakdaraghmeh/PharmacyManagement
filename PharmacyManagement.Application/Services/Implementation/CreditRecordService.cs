@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using PharmacyManagement.Application.Common;
 using PharmacyManagement.Application.DTOs.CreditRecord;
 using PharmacyManagement.Domain.Entities;
