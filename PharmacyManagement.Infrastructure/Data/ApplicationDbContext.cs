@@ -95,6 +95,11 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.PaidAmount).HasPrecision(18, 2);
             entity.Property(e => e.RemainingAmount).HasPrecision(18, 2);
 
+            entity.Property(e => e.Type).HasConversion<int>(); // هذا يحول TransactionType إلى int في DB
+
+            entity.Property(e => e.Status).HasConversion<int>();
+
+
             entity.HasOne(e => e.User)
                 .WithMany(u => u.CreditRecords)
                 .HasForeignKey(e => e.UserId)
