@@ -19,6 +19,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PharmacyManagement.Application\PharmacyManagement.Application.csproj" />
+    <ProjectReference Include="..\PharmacyManagement.Domain\PharmacyManagement.Domain.csproj" />
+
     <ProjectReference Include="..\PharmacyManagement.Infrastructure\PharmacyManagement.Infrastructure.csproj" />
   </ItemGroup>
 
