@@ -60,19 +60,35 @@ public class CreditRecordService : ICreditRecordService
         }
     }
 
-    public async Task<ApiResponse<List<CreditRecordResponseDto>>> GetAllCreditRecordsAsync(string userId)
+   public async Task<ApiResponse<object>> GetAllCreditRecordsAsync(string userId)
+{
+    try
     {
-        try
+        var creditRecords = await _unitOfWork.CreditRecords.GetByUserIdAsync(userId);
+
+        var recordsResponse = _mapper.Map<List<CreditRecordResponseDto>>(creditRecords);
+
+        var summary = new CreditSummaryDto
         {
-            var creditRecords = await _unitOfWork.CreditRecords.GetByUserIdAsync(userId);
-            var response = _mapper.Map<List<CreditRecordResponseDto>>(creditRecords);
-            return ApiResponse<List<CreditRecordResponseDto>>.SuccessResponse(response);
-        }
-        catch (Exception ex)
+            TotalCredit = creditRecords.Where(x => x.Type == TransactionType.Credit).Sum(x => x.TotalAmount),
+            TotalDebt = creditRecords.Where(x => x.Type == TransactionType.Debit).Sum(x => x.TotalAmount),
+            TotalPaid = creditRecords.Sum(x => x.PaidAmount)
+        };
+
+        // Return both
+        var result = new
         {
-            return ApiResponse<List<CreditRecordResponseDto>>.ErrorResponse($"Failed to get credit records: {ex.Message}");
-        }
+            Records = recordsResponse,
+            Summary = summary
+        };
+
+        return ApiResponse<object>.SuccessResponse(result, "Success");
     }
+    catch (Exception ex)
+    {
+        return ApiResponse<object>.ErrorResponse($"Failed to get credit records: {ex.Message}");
+    }
+}
 
     public async Task<ApiResponse<CreditRecordResponseDto>> GetCreditRecordByIdAsync(string id, string userId)
     {
@@ -106,7 +122,7 @@ public class CreditRecordService : ICreditRecordService
             }
 
             _mapper.Map(creditRecordDto, creditRecord);
-            
+
             creditRecord.RemainingAmount = creditRecord.TotalAmount - creditRecord.PaidAmount;
 
             await _unitOfWork.CreditRecords.UpdateAsync(creditRecord);

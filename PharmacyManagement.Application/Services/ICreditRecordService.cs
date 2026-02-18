@@ -6,7 +6,8 @@ using PharmacyManagement.Application.DTOs.CreditRecord;
 public interface ICreditRecordService
 {
     Task<ApiResponse<CreditRecordResponseDto>> CreateCreditRecordAsync(CreditRecordDto creditRecordDto, string userId);
-    Task<ApiResponse<List<CreditRecordResponseDto>>> GetAllCreditRecordsAsync(string userId);
+// ICreditRecordService.cs
+Task<ApiResponse<object>> GetAllCreditRecordsAsync(string userId);
     Task<ApiResponse<CreditRecordResponseDto>> GetCreditRecordByIdAsync(string id, string userId);
     Task<ApiResponse<CreditRecordResponseDto>> UpdateCreditRecordAsync(string id, CreditRecordDto creditRecordDto, string userId);
     Task<ApiResponse<CreditSummaryDto>> GetSummaryAsync(string userId);
