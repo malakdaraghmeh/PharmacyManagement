@@ -70,8 +70,8 @@ public class CreditRecordService : ICreditRecordService
 
         var summary = new CreditSummaryDto
         {
-            TotalCredit = creditRecords.Where(x => x.Type == TransactionType.Credit).Sum(x => x.TotalAmount),
-            TotalDebt = creditRecords.Where(x => x.Type == TransactionType.Debit).Sum(x => x.TotalAmount),
+            TotalCredit = creditRecords.Where(x => x.Type == TransactionType.Credit).Sum(x => x.PaidAmount),
+            TotalDebt = creditRecords.Where(x => x.Type == TransactionType.Debit).Sum(x => x.RemainingAmount),
             TotalPaid = creditRecords.Sum(x => x.PaidAmount)
         };
 
