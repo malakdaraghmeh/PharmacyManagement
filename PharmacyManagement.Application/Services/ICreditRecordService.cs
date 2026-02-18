@@ -9,5 +9,6 @@ public interface ICreditRecordService
     Task<ApiResponse<List<CreditRecordResponseDto>>> GetAllCreditRecordsAsync(string userId);
     Task<ApiResponse<CreditRecordResponseDto>> GetCreditRecordByIdAsync(string id, string userId);
     Task<ApiResponse<CreditRecordResponseDto>> UpdateCreditRecordAsync(string id, CreditRecordDto creditRecordDto, string userId);
+    Task<ApiResponse<CreditSummaryDto>> GetSummaryAsync(string userId);
     Task<ApiResponse<bool>> DeleteCreditRecordAsync(string id, string userId);
 }

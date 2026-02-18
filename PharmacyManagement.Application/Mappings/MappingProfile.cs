@@ -33,8 +33,17 @@ namespace PharmacyManagement.Application.Mappings
             CreateMap<SaleItem, SaleItemResponseDto>();
 
             // CreditRecord mappings
-            CreateMap<CreditRecord, CreditRecordDto>().ReverseMap();
+            // CreateMap<CreditRecord, CreditRecordDto>().ReverseMap();
+            // CreateMap<CreditRecord, CreditRecordResponseDto>();
+            // DTO → Entity (Create / Update)
+            CreateMap<CreditRecordDto, CreditRecord>();
+            // Entity → Response
             CreateMap<CreditRecord, CreditRecordResponseDto>();
+
+
+
+
+
 
 
             // Notification mappings

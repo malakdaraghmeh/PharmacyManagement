@@ -70,4 +70,10 @@ public class CreditRecordController : ControllerBase
 
         return Ok(result);
     }
+    [HttpGet("summary")]
+    public async Task<IActionResult> GetSummary()
+    {
+        var result = await _creditRecordService.GetSummaryAsync(GetUserId());
+        return Ok(result);
+    }
 }

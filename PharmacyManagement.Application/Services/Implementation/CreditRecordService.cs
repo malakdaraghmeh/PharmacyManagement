@@ -116,3 +116,22 @@ public class CreditRecordService : ICreditRecordService
         }
     }
 }
+public async Task<ApiResponse<CreditSummaryDto>> GetSummaryAsync(string userId)
+{
+    try
+    {
+        var records = await _unitOfWork.CreditRecords.GetByUserIdAsync(userId);
+
+        var summary = new CreditSummaryDto
+        {
+            TotalCredit = records.Sum(x => x.TotalAmount),
+            TotalPaid = records.Sum(x => x.PaidAmount)
+        };
+
+        return ApiResponse<CreditSummaryDto>.SuccessResponse(summary);
+    }
+    catch (Exception ex)
+    {
+        return ApiResponse<CreditSummaryDto>.ErrorResponse($"Failed to get summary: {ex.Message}");
+    }
+}
