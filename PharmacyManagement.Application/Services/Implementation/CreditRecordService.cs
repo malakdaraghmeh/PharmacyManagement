@@ -115,16 +115,23 @@ public class CreditRecordService : ICreditRecordService
             return ApiResponse<bool>.ErrorResponse($"Failed to delete credit record: {ex.Message}");
         }
     }
-}
-public async Task<ApiResponse<CreditSummaryDto>> GetSummaryAsync(string userId)
+    public async Task<ApiResponse<CreditSummaryDto>> GetSummaryAsync(string userId)
 {
     try
     {
+        // get all credit records for this user
         var records = await _unitOfWork.CreditRecords.GetByUserIdAsync(userId);
 
         var summary = new CreditSummaryDto
         {
-            TotalCredit = records.Sum(x => x.TotalAmount),
+            TotalCredit = records
+                .Where(x => x.Type == TransactionType.Credit)
+                .Sum(x => x.TotalAmount),
+
+            TotalDebt = records
+                .Where(x => x.Type == TransactionType.Debt)
+                .Sum(x => x.TotalAmount),
+
             TotalPaid = records.Sum(x => x.PaidAmount)
         };
 
@@ -135,3 +142,7 @@ public async Task<ApiResponse<CreditSummaryDto>> GetSummaryAsync(string userId)
         return ApiResponse<CreditSummaryDto>.ErrorResponse($"Failed to get summary: {ex.Message}");
     }
 }
+
+
+}
+
