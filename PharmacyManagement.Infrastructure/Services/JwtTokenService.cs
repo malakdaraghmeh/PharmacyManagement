@@ -5,6 +5,7 @@ using PharmacyManagement.Domain.Entities;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using PharmacyManagement.Domain.Interfaces;
 
 namespace PharmacyManagement.Infrastructure.Services;
 

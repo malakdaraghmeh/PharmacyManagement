@@ -11,7 +11,7 @@ using PharmacyManagement.Infrastructure.Repositories;
 using PharmacyManagement.Infrastructure.Services;
 using System.Text;
 using System.Text.Json.Serialization;
-
+using AutoMapper;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -95,7 +95,17 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 // Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDrugService, DrugService>();
-builder.Services.AddScoped<ISaleService, SaleService>();
+// builder.Services.AddScoped<ISaleService, SaleService>();
+builder.Services.AddScoped<ISaleService>(provider =>
+{
+    var unitOfWork = provider.GetRequiredService<IUnitOfWork>();
+    var mapper = provider.GetRequiredService<IMapper>();
+    var notificationService = provider.GetRequiredService<INotificationService>();
+    var dbContext = provider.GetRequiredService<ApplicationDbContext>();
+
+    return new SaleService(unitOfWork, mapper, notificationService, dbContext);
+});
+
 builder.Services.AddScoped<ISaleItemService, SaleItemService>();
 builder.Services.AddScoped<ICreditRecordService, CreditRecordService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();

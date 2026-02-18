@@ -3,6 +3,7 @@ using PharmacyManagement.Application.Common;
 using PharmacyManagement.Application.DTOs.Sale;
 using PharmacyManagement.Domain.Entities;
 using PharmacyManagement.Domain.Interfaces;
+using PharmacyManagement.Infrastructure.Data;
 
 namespace PharmacyManagement.Application.Services.Implementation;
 
@@ -12,20 +13,33 @@ public class SaleService : ISaleService
     private readonly IMapper _mapper;
     private readonly INotificationService _notificationService;
 
-    public SaleService(IUnitOfWork unitOfWork, IMapper mapper, INotificationService notificationService)
-    {
-        _unitOfWork = unitOfWork;
-        _mapper = mapper;
-        _notificationService = notificationService;
-    }
+   private readonly ApplicationDbContext _dbContext;
+
+public SaleService(
+    IUnitOfWork unitOfWork, 
+    IMapper mapper, 
+    INotificationService notificationService,
+    ApplicationDbContext dbContext)
+{
+    _unitOfWork = unitOfWork;
+    _mapper = mapper;
+    _notificationService = notificationService;
+    _dbContext = dbContext;
+}
 
     public async Task<ApiResponse<SaleResponseDto>> CreateSaleAsync(CreateSaleDto saleDto, string userId)
+{
+var strategy = _dbContext.Database.CreateExecutionStrategy();
+
+return await strategy.ExecuteAsync<ApplicationDbContext, ApiResponse<SaleResponseDto>>(
+    _dbContext, // state object
+    async (db, state, ct) =>
     {
+        await _unitOfWork.BeginTransactionAsync();
+
         try
         {
-            await _unitOfWork.BeginTransactionAsync();
-
-            // Create sale
+            // --- Create sale ---
             var sale = _mapper.Map<Sale>(saleDto);
             sale.UserId = userId;
             sale.InvoiceNumber = GenerateInvoiceNumber();
@@ -33,7 +47,6 @@ public class SaleService : ISaleService
             await _unitOfWork.Sales.AddAsync(sale);
             await _unitOfWork.SaveChangesAsync();
 
-            // Create sale items and update drug quantities
             foreach (var itemDto in saleDto.Items)
             {
                 var drug = await _unitOfWork.Drugs.GetByIdAsync(itemDto.DrugId);
@@ -49,16 +62,13 @@ public class SaleService : ISaleService
                     return ApiResponse<SaleResponseDto>.ErrorResponse($"Insufficient quantity for {itemDto.DrugName}");
                 }
 
-                // Update drug quantity
                 drug.Quantity -= itemDto.Quantity;
                 await _unitOfWork.Drugs.UpdateAsync(drug);
 
-                // Create sale item
                 var saleItem = _mapper.Map<SaleItem>(itemDto);
                 saleItem.SaleId = sale.Id;
                 await _unitOfWork.SaleItems.AddAsync(saleItem);
 
-                // Check if stock is low
                 if (drug.Quantity <= drug.MinimumStock)
                 {
                     await _notificationService.CreateNotificationAsync(
@@ -82,7 +92,15 @@ public class SaleService : ISaleService
             await _unitOfWork.RollbackTransactionAsync();
             return ApiResponse<SaleResponseDto>.ErrorResponse($"Failed to create sale: {ex.Message}");
         }
-    }
+    },
+    null, // no recovery operation needed
+    default // cancellation token
+);
+
+
+
+}
+
 
     public async Task<ApiResponse<List<SaleResponseDto>>> GetAllSalesAsync(string userId)
     {
