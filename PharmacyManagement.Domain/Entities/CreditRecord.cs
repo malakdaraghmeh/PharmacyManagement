@@ -10,7 +10,7 @@ public class CreditRecord : BaseEntity
     public string CustomerPhone { get; set; } = string.Empty;
     public decimal TotalAmount { get; set; }
     public decimal PaidAmount { get; set; }
-    public decimal RemainingAmount => TotalAmount - PaidAmount;
+    public decimal RemainingAmount { get; set; } // EF Core can map this
     public DateTime DueDate { get; set; }
     // public string Status { get; set; } = "Pending"; // Pending, Paid, Overdue
     public CreditStatus Status { get; set; } = CreditStatus.Pending;

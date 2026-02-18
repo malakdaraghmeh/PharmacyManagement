@@ -46,6 +46,8 @@ public class CreditRecordService : ICreditRecordService
             var creditRecord = _mapper.Map<CreditRecord>(creditRecordDto);
             creditRecord.UserId = userId;
 
+            creditRecord.RemainingAmount = creditRecord.TotalAmount - creditRecord.PaidAmount;
+
             await _unitOfWork.CreditRecords.AddAsync(creditRecord);
             await _unitOfWork.SaveChangesAsync();
 
@@ -104,6 +106,9 @@ public class CreditRecordService : ICreditRecordService
             }
 
             _mapper.Map(creditRecordDto, creditRecord);
+            
+            creditRecord.RemainingAmount = creditRecord.TotalAmount - creditRecord.PaidAmount;
+
             await _unitOfWork.CreditRecords.UpdateAsync(creditRecord);
             await _unitOfWork.SaveChangesAsync();
 
