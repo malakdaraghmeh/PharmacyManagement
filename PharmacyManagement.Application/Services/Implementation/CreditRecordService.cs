@@ -3,6 +3,7 @@ using PharmacyManagement.Application.Common;
 using PharmacyManagement.Application.DTOs.CreditRecord;
 using PharmacyManagement.Domain.Entities;
 using PharmacyManagement.Domain.Interfaces;
+using PharmacyManagement.Domain.Common.Enums;
 
 namespace PharmacyManagement.Application.Services.Implementation;
 
@@ -10,6 +11,27 @@ public class CreditRecordService : ICreditRecordService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+      public async Task<ApiResponse<CreditSummaryDto>> GetSummaryAsync(string userId)
+    {
+        try
+        {
+            var records = await _unitOfWork.CreditRecords.GetByUserIdAsync(userId);
+
+            var summary = new CreditSummaryDto
+            {
+                TotalCredit = records.Where(x => x.Type == TransactionType.Credit).Sum(x => x.TotalAmount),
+                TotalDebt = records.Where(x => x.Type == TransactionType.Debit).Sum(x => x.TotalAmount),
+                TotalPaid = records.Sum(x => x.PaidAmount)
+            };
+
+            return ApiResponse<CreditSummaryDto>.SuccessResponse(summary);
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<CreditSummaryDto>.ErrorResponse($"Failed to get summary: {ex.Message}");
+        }
+    }
+
 
     public CreditRecordService(IUnitOfWork unitOfWork, IMapper mapper)
     {
@@ -115,34 +137,7 @@ public class CreditRecordService : ICreditRecordService
             return ApiResponse<bool>.ErrorResponse($"Failed to delete credit record: {ex.Message}");
         }
     }
-    public async Task<ApiResponse<CreditSummaryDto>> GetSummaryAsync(string userId)
-{
-    try
-    {
-        // get all credit records for this user
-        var records = await _unitOfWork.CreditRecords.GetByUserIdAsync(userId);
-
-        var summary = new CreditSummaryDto
-        {
-            TotalCredit = records
-                .Where(x => x.Type == TransactionType.Credit)
-                .Sum(x => x.TotalAmount),
-
-            TotalDebt = records
-                .Where(x => x.Type == TransactionType.Debt)
-                .Sum(x => x.TotalAmount),
-
-            TotalPaid = records.Sum(x => x.PaidAmount)
-        };
-
-        return ApiResponse<CreditSummaryDto>.SuccessResponse(summary);
-    }
-    catch (Exception ex)
-    {
-        return ApiResponse<CreditSummaryDto>.ErrorResponse($"Failed to get summary: {ex.Message}");
-    }
-}
-
+    
 
 }
 
