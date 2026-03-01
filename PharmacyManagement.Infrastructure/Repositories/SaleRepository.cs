@@ -57,4 +57,14 @@ public class SaleRepository : GenericRepository<Sale>, ISaleRepository
             .Take(count)
             .ToListAsync();
     }
+    public IQueryable<Sale> GetAllSalesWithItemsAsyncQueryable()
+    {
+         return _dbSet.Include(s => s.SaleItems).AsQueryable();
+    }
+    public async Task<List<Sale>> GetAllSalesWithItemsAsync()
+    {
+          return await _dbSet.Include(s => s.SaleItems).ToListAsync();
+    }
+
+
 }
