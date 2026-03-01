@@ -65,9 +65,9 @@ return await strategy.ExecuteAsync<ApplicationDbContext, ApiResponse<SaleRespons
                 drug.Quantity -= itemDto.Quantity;
                 await _unitOfWork.Drugs.UpdateAsync(drug);
 
-                var saleItem = _mapper.Map<SaleItem>(itemDto);
-                saleItem.SaleId = sale.Id;
-                await _unitOfWork.SaleItems.AddAsync(saleItem);
+                // var saleItem = _mapper.Map<SaleItem>(itemDto);
+                // saleItem.SaleId = sale.Id;
+                // await _unitOfWork.SaleItems.AddAsync(saleItem);
 
                 if (drug.Quantity <= drug.MinimumStock)
                 {
