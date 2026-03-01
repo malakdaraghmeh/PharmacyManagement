@@ -29,7 +29,9 @@ namespace PharmacyManagement.Application.Mappings
             CreateMap<Sale, SaleResponseDto>();
 
             // SaleItem mappings
-            CreateMap<SaleItemDto, SaleItem>();
+            // CreateMap<SaleItemDto, SaleItem>();
+            CreateMap<Sale, SaleResponseDto>()
+    .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.SaleItems));
             CreateMap<SaleItem, SaleItemResponseDto>();
 
             // CreditRecord mappings
