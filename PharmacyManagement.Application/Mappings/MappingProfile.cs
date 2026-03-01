@@ -25,13 +25,13 @@ namespace PharmacyManagement.Application.Mappings
             CreateMap<Drug, BarcodeDrugResponseDto>();
 
             // Sale mappings
-            CreateMap<CreateSaleDto, Sale>();
-            CreateMap<Sale, SaleResponseDto>();
+            CreateMap<CreateSaleDto, Sale>().ForMember(dest => dest.SaleItems, opt => opt.MapFrom(src => src.Items));
+
+            CreateMap<Sale, SaleResponseDto>().ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.SaleItems));
 
             // SaleItem mappings
             // CreateMap<SaleItemDto, SaleItem>();
-            CreateMap<Sale, SaleResponseDto>()
-    .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.SaleItems));
+            CreateMap<SaleItemDto, SaleItem>();
             CreateMap<SaleItem, SaleItemResponseDto>();
 
             // CreditRecord mappings
