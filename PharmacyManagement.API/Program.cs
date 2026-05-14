@@ -71,17 +71,19 @@ builder.Services.AddSwaggerGen(options =>
 // Database
 // builder.Services.AddDbContext<ApplicationDbContext>(options =>
 //     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//     options.UseSqlServer(
+//         builder.Configuration.GetConnectionString("DefaultConnection"),
+//         sqlOptions =>
+//         {
+//             sqlOptions.EnableRetryOnFailure(
+//                 maxRetryCount: 5,
+//                 maxRetryDelay: TimeSpan.FromSeconds(10),
+//                 errorNumbersToAdd: null);
+//         }));
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        sqlOptions =>
-        {
-            sqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 5,
-                maxRetryDelay: TimeSpan.FromSeconds(10),
-                errorNumbersToAdd: null);
-        }));
-
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection")));
 // AutoMapper
 // AutoMapper Configuration
 builder.Services.AddAutoMapper(config =>
