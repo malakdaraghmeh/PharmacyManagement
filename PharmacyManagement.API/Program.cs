@@ -69,21 +69,21 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // Database
-// builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-// builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//     options.UseSqlServer(
-//         builder.Configuration.GetConnectionString("DefaultConnection"),
-//         sqlOptions =>
-//         {
-//             sqlOptions.EnableRetryOnFailure(
-//                 maxRetryCount: 5,
-//                 maxRetryDelay: TimeSpan.FromSeconds(10),
-//                 errorNumbersToAdd: null);
-//         }));
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//    options.UseSqlServer(
+//        builder.Configuration.GetConnectionString("DefaultConnection"),
+//        sqlOptions =>
+//        {
+//            sqlOptions.EnableRetryOnFailure(
+//                maxRetryCount: 5,
+//                maxRetryDelay: TimeSpan.FromSeconds(10),
+//                errorNumbersToAdd: null);
+//        }));
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//    options.UseNpgsql(
+//        builder.Configuration.GetConnectionString("DefaultConnection")));
 // AutoMapper
 // AutoMapper Configuration
 builder.Services.AddAutoMapper(config =>
@@ -115,6 +115,20 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+
+// New pharmacy inventory services
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IUnitService, UnitService>();
+builder.Services.AddScoped<IManufacturerService, ManufacturerService>();
+builder.Services.AddScoped<ISupplierService, SupplierService>();
+builder.Services.AddScoped<IBatchService, BatchService>();
+builder.Services.AddScoped<IStockAdjustmentService, StockAdjustmentService>();
+builder.Services.AddScoped<IStockMovementService, StockMovementService>();
+builder.Services.AddScoped<IStockReceiveService, StockReceiveService>();
+builder.Services.AddScoped<ILowStockService, LowStockService>();
+builder.Services.AddScoped<IExpiryAlertService, ExpiryAlertService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<ISettingsService, SettingsService>();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -151,8 +165,8 @@ builder.Services.AddCors(options =>
               .AllowCredentials();
     });
 });
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+//var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+//builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 var app = builder.Build();
 
@@ -168,7 +182,7 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Pharmacy Management API V1");
 });
 
-// app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 
 app.UseCors("AllowAngularApp");
 

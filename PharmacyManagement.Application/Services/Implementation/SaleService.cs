@@ -1,6 +1,8 @@
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using PharmacyManagement.Application.Common;
 using PharmacyManagement.Application.DTOs.Sale;
+using PharmacyManagement.Domain.Common.Enums;
 using PharmacyManagement.Domain.Entities;
 using PharmacyManagement.Domain.Interfaces;
 using PharmacyManagement.Infrastructure.Data;
@@ -56,25 +58,57 @@ return await strategy.ExecuteAsync<ApplicationDbContext, ApiResponse<SaleRespons
                     return ApiResponse<SaleResponseDto>.ErrorResponse($"Drug {itemDto.DrugName} not found");
                 }
 
-                if (drug.Quantity < itemDto.Quantity)
+                // Fetch available batches for this drug ordered FEFO (First-Expiry-First-Out)
+                var batches = await _dbContext.Set<Batch>()
+                    .Where(b => b.DrugId == drug.Id && b.UserId == userId && b.RemainingQuantity > 0 && !b.IsExpired)
+                    .OrderBy(b => b.ExpiryDate)
+                    .ToListAsync();
+
+                var totalAvailable = batches.Sum(b => b.RemainingQuantity);
+                if (totalAvailable < itemDto.Quantity)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
                     return ApiResponse<SaleResponseDto>.ErrorResponse($"Insufficient quantity for {itemDto.DrugName}");
                 }
 
-                drug.Quantity -= itemDto.Quantity;
-                await _unitOfWork.Drugs.UpdateAsync(drug);
+                var remainingToDeduct = itemDto.Quantity;
+                foreach (var batch in batches)
+                {
+                    if (remainingToDeduct <= 0) break;
 
-                // var saleItem = _mapper.Map<SaleItem>(itemDto);
-                // saleItem.SaleId = sale.Id;
-                // await _unitOfWork.SaleItems.AddAsync(saleItem);
+                    var deduct = Math.Min(batch.RemainingQuantity, remainingToDeduct);
+                    batch.RemainingQuantity -= deduct;
+                    remainingToDeduct -= deduct;
 
-                if (drug.Quantity <= drug.MinimumStock)
+                    _dbContext.Set<StockMovement>().Add(new StockMovement
+                    {
+                        DrugId = drug.Id,
+                        BatchId = batch.Id,
+                        Type = StockMovementType.SALE,
+                        Quantity = deduct,
+                        RemainingAfter = batch.RemainingQuantity,
+                        UnitPrice = itemDto.UnitPrice,
+                        TotalValue = itemDto.UnitPrice * deduct,
+                        ReferenceId = sale.Id,
+                        ReferenceType = "sale",
+                        PerformedBy = userId,
+                        UserId = userId
+                    });
+                }
+
+                var newTotal = totalAvailable - itemDto.Quantity;
+                if (newTotal <= 0)
+                {
+                    drug.Status = DrugStatus.OUT_OF_STOCK;
+                    await _unitOfWork.Drugs.UpdateAsync(drug);
+                }
+
+                if (newTotal <= drug.MinimumStock)
                 {
                     await _notificationService.CreateNotificationAsync(
                         userId,
                         "Low Stock Alert",
-                        $"{drug.Name} is running low. Current quantity: {drug.Quantity}",
+                        $"{drug.Name} is running low. Current quantity: {newTotal}",
                         "LowStock"
                     );
                 }

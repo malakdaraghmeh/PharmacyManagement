@@ -32,9 +32,22 @@ public class DrugController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllDrugs()
+    public async Task<IActionResult> GetAllDrugs(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? name = null,
+        [FromQuery] string? barcode = null,
+        [FromQuery] string? categoryId = null,
+        [FromQuery] string? manufacturerId = null)
     {
-        var result = await _drugService.GetAllDrugsAsync(GetUserId());
+        var result = await _drugService.GetAllDrugsAsync(GetUserId(), page, pageSize, name, barcode, categoryId, manufacturerId);
+        return Ok(result);
+    }
+
+    [HttpGet("low-stock")]
+    public async Task<IActionResult> GetLowStockDrugs()
+    {
+        var result = await _drugService.GetLowStockDrugsAsync(GetUserId());
         return Ok(result);
     }
 
@@ -71,7 +84,7 @@ public class DrugController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPatch("{id}/status")]
+    [HttpPut("status/{id}")]
     public async Task<IActionResult> ChangeDrugStatus(string id)
     {
         var result = await _drugService.ChangeDrugStatusAsync(id, GetUserId());

@@ -1,6 +1,7 @@
 using PharmacyManagement.Application.DTOs.Reports;
 using PharmacyManagement.Domain.Entities;
 using PharmacyManagement.Domain.Interfaces;
+using PharmacyManagement.Infrastructure.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,15 +15,27 @@ namespace PharmacyManagement.Application.Services.Implementation
         private readonly ISaleRepository _saleRepository;
         private readonly IDrugRepository _drugRepository;
         private readonly ICreditRecordRepository _creditRepository;
+        private readonly ApplicationDbContext _dbContext;
 
         public ReportsService(
             ISaleRepository saleRepository, 
             IDrugRepository drugRepository, 
-            ICreditRecordRepository creditRepository)
+            ICreditRecordRepository creditRepository,
+            ApplicationDbContext dbContext)
         {
             _saleRepository = saleRepository;
             _drugRepository = drugRepository;
             _creditRepository = creditRepository;
+            _dbContext = dbContext;
+        }
+
+        // Average purchase (cost) price per drug, derived from its batches.
+        private async Task<Dictionary<string, decimal>> GetCostByDrugAsync()
+        {
+            return await _dbContext.Set<Batch>()
+                .GroupBy(b => b.DrugId)
+                .Select(g => new { DrugId = g.Key, Avg = g.Average(x => x.PurchasePrice) })
+                .ToDictionaryAsync(x => x.DrugId, x => x.Avg);
         }
 
         public async Task<List<SaleFinancialReportDto>> GetSalesFinancialReportAsync(DateTime? from = null, DateTime? to = null)
@@ -36,7 +49,7 @@ namespace PharmacyManagement.Application.Services.Implementation
                 salesQuery = salesQuery.Where(s => s.CreatedAt <= to.Value);
 
             var sales = await salesQuery.ToListAsync();
-            var drugs = await _drugRepository.GetAllAsync();
+            var costByDrug = await GetCostByDrugAsync();
 
             var report = new List<SaleFinancialReportDto>();
 
@@ -52,16 +65,15 @@ namespace PharmacyManagement.Application.Services.Implementation
 
                 foreach (var item in sale.SaleItems)
                 {
-                    var drug = drugs.FirstOrDefault(d => d.Id == item.DrugId);
-                    if (drug == null) continue;
+                    var costPrice = costByDrug.TryGetValue(item.DrugId, out var c) ? c : 0m;
 
-                    var profitOrLoss = (item.UnitPrice - drug.CostPrice) * item.Quantity;
+                    var profitOrLoss = (item.UnitPrice - costPrice) * item.Quantity;
 
                     saleReport.Items.Add(new SaleItemFinancialDto
                     {
                         DrugName = item.DrugName,
                         UnitPrice = item.UnitPrice,
-                        CostPrice = drug.CostPrice,
+                        CostPrice = costPrice,
                         Quantity = item.Quantity,
                         TotalProfitOrLoss = profitOrLoss
                     });
@@ -86,7 +98,7 @@ namespace PharmacyManagement.Application.Services.Implementation
         public async Task<List<FinancialAggregateDto>> GetFinancialAggregatesAsync(string periodType)
         {
             var sales = await _saleRepository.GetAllSalesWithItemsAsync();
-            var drugs = await _drugRepository.GetAllAsync();
+            var costByDrug = await GetCostByDrugAsync();
 
             var saleReports = new List<(DateTime Date, decimal Profit, decimal Loss, decimal Cash, decimal Credit)>();
 
@@ -96,10 +108,9 @@ namespace PharmacyManagement.Application.Services.Implementation
 
                 foreach (var item in sale.SaleItems)
                 {
-                    var drug = drugs.FirstOrDefault(d => d.Id == item.DrugId);
-                    if (drug == null) continue;
+                    var costPrice = costByDrug.TryGetValue(item.DrugId, out var c) ? c : 0m;
 
-                    var profitOrLoss = (item.UnitPrice - drug.CostPrice) * item.Quantity;
+                    var profitOrLoss = (item.UnitPrice - costPrice) * item.Quantity;
 
                     if (profitOrLoss >= 0)
                         totalProfit += profitOrLoss;

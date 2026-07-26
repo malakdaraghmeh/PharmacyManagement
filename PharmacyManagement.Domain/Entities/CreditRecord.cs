@@ -17,6 +17,7 @@ public class CreditRecord : BaseEntity
     public string Notes { get; set; } = string.Empty;
     public string UserId { get; set; } = string.Empty;
     public TransactionType Type { get; set; } = TransactionType.Credit;
+    public string? RelatedSaleId { get; set; }
     // Navigation properties
     public User User { get; set; } = null!;
 }

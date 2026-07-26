@@ -7,8 +7,13 @@ public class User : BaseEntity
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string PharmacyName { get; set; } = string.Empty;
+    public string OwnerName { get; set; } = string.Empty;
     public string PhoneNumber { get; set; } = string.Empty;
     public string City { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    public string LogoUrl { get; set; } = string.Empty;
+    public string Plan { get; set; } = "Free";
+    public string Status { get; set; } = "ACTIVE";
 
     // Navigation properties
     public ICollection<Drug> Drugs { get; set; } = new List<Drug>();

@@ -1,16 +1,30 @@
 ﻿using PharmacyManagement.Application.Common;
 using PharmacyManagement.Application.DTOs.Dashboard;
+using PharmacyManagement.Domain.Entities;
 using PharmacyManagement.Domain.Interfaces;
+using PharmacyManagement.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace PharmacyManagement.Application.Services.Implementation;
 
 public class DashboardService : IDashboardService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ApplicationDbContext _dbContext;
 
-    public DashboardService(IUnitOfWork unitOfWork)
+    public DashboardService(IUnitOfWork unitOfWork, ApplicationDbContext dbContext)
     {
         _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
+    }
+
+    private async Task<Dictionary<string, int>> GetStockByDrugAsync(string userId)
+    {
+        return await _dbContext.Set<Batch>()
+            .Where(b => b.UserId == userId)
+            .GroupBy(b => b.DrugId)
+            .Select(g => new { DrugId = g.Key, Total = g.Sum(x => x.RemainingQuantity) })
+            .ToDictionaryAsync(x => x.DrugId, x => x.Total);
     }
 
     public async Task<ApiResponse<SalesTodayDto>> GetSalesTodayAsync(string userId)
@@ -45,12 +59,17 @@ public class DashboardService : IDashboardService
     {
         try
         {
-            var drugs = await _unitOfWork.Drugs.GetLowStockDrugsAsync(userId);
-            var response = drugs.Select(d => new LowStockDrugDto
-            {
-                Name = d.Name,
-                Quantity = d.Quantity
-            }).ToList();
+            var drugs = (await _unitOfWork.Drugs.GetByUserIdAsync(userId)).ToList();
+            var stockByDrug = await GetStockByDrugAsync(userId);
+
+            var response = drugs
+                .Select(d => new { Drug = d, Qty = stockByDrug.TryGetValue(d.Id, out var t) ? t : 0 })
+                .Where(x => x.Qty <= x.Drug.MinimumStock)
+                .Select(x => new LowStockDrugDto
+                {
+                    Name = x.Drug.Name,
+                    Quantity = x.Qty
+                }).ToList();
             return ApiResponse<List<LowStockDrugDto>>.SuccessResponse(response);
         }
         catch (Exception ex)
@@ -63,13 +82,18 @@ public class DashboardService : IDashboardService
     {
         try
         {
-            var drugs = await _unitOfWork.Drugs.GetExpiringDrugsAsync(userId);
-            var response = drugs.Select(d => new ExpiringDrugDto
+            var thresholdDate = DateTime.UtcNow.AddDays(30);
+            var response = await _dbContext.Set<Batch>()
+                .Where(b => b.UserId == userId && b.RemainingQuantity > 0 && b.ExpiryDate <= thresholdDate)
+                .Join(_dbContext.Set<Drug>(), b => b.DrugId, d => d.Id, (b, d) => new { d.Name, b.ExpiryDate })
+                .ToListAsync();
+
+            var result = response.Select(x => new ExpiringDrugDto
             {
-                Name = d.Name,
-                DaysLeft = (d.ExpiryDate - DateTime.UtcNow).Days
+                Name = x.Name,
+                DaysLeft = (x.ExpiryDate - DateTime.UtcNow).Days
             }).ToList();
-            return ApiResponse<List<ExpiringDrugDto>>.SuccessResponse(response);
+            return ApiResponse<List<ExpiringDrugDto>>.SuccessResponse(result);
         }
         catch (Exception ex)
         {
@@ -83,23 +107,36 @@ public class DashboardService : IDashboardService
         {
             var alerts = new List<AlertDto>();
 
-            var lowStockDrugs = await _unitOfWork.Drugs.GetLowStockDrugsAsync(userId);
-            foreach (var drug in lowStockDrugs.Take(5))
+            var drugs = (await _unitOfWork.Drugs.GetByUserIdAsync(userId)).ToList();
+            var stockByDrug = await GetStockByDrugAsync(userId);
+
+            foreach (var d in drugs)
             {
-                alerts.Add(new AlertDto
+                var qty = stockByDrug.TryGetValue(d.Id, out var t) ? t : 0;
+                if (qty <= d.MinimumStock)
                 {
-                    Name = drug.Name,
-                    Message = $"Low stock: {drug.Quantity} units remaining"
-                });
+                    alerts.Add(new AlertDto
+                    {
+                        Name = d.Name,
+                        Message = $"Low stock: {qty} units remaining"
+                    });
+                }
+                if (alerts.Count >= 5) break;
             }
 
-            var expiringDrugs = await _unitOfWork.Drugs.GetExpiringDrugsAsync(userId);
-            foreach (var drug in expiringDrugs.Take(5))
+            var thresholdDate = DateTime.UtcNow.AddDays(30);
+            var expiring = await _dbContext.Set<Batch>()
+                .Where(b => b.UserId == userId && b.RemainingQuantity > 0 && b.ExpiryDate <= thresholdDate)
+                .Join(_dbContext.Set<Drug>(), b => b.DrugId, d => d.Id, (b, d) => new { d.Name, b.ExpiryDate })
+                .Take(5)
+                .ToListAsync();
+
+            foreach (var e in expiring)
             {
-                var daysLeft = (drug.ExpiryDate - DateTime.UtcNow).Days;
+                var daysLeft = (e.ExpiryDate - DateTime.UtcNow).Days;
                 alerts.Add(new AlertDto
                 {
-                    Name = drug.Name,
+                    Name = e.Name,
                     Message = $"Expires in {daysLeft} days"
                 });
             }

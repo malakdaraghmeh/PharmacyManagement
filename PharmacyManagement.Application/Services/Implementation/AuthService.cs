@@ -48,7 +48,8 @@ public class AuthService : IAuthService
                 Token = token,
                 UserId = user.Id,
                 Email = user.Email,
-                PharmacyName = user.PharmacyName
+                PharmacyName = user.PharmacyName,
+                User = _mapper.Map<UserDto>(user)
             };
 
             return ApiResponse<LoginResponseDto>.SuccessResponse(response, "Login successful");

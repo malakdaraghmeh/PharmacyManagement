@@ -9,8 +9,8 @@ namespace PharmacyManagement.Infrastructure.Data
         {
             var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
 
-            // ضع نفس connection string الموجود في Program.cs
-            optionsBuilder.UseSqlServer("Server=localhost;Database=PharmacyManagementDb;Trusted_Connection=True;");
+            // Must match the provider/connection string used at runtime in Program.cs (SQL Server)
+            optionsBuilder.UseSqlServer("Server=.;Database=PharmacyManagementDB;User Id=admin;Password=admin;TrustServerCertificate=True");
 
             return new ApplicationDbContext(optionsBuilder.Options);
         }
