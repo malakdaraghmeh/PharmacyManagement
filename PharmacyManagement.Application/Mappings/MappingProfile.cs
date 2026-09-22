@@ -37,7 +37,8 @@ namespace PharmacyManagement.Application.Mappings
                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
             // Drug mappings
-            CreateMap<DrugDto, Drug>();
+            CreateMap<DrugDto, Drug>()
+                .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description ?? string.Empty));
             CreateMap<Drug, DrugResponseDto>()
                 .ForMember(dest => dest.SupplierIds, opt => opt.MapFrom(src => src.DrugSuppliers.Select(ds => ds.SupplierId).ToList()));
 

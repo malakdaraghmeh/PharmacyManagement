@@ -31,9 +31,13 @@ public class SupplierController : ControllerBase
     public async Task<IActionResult> GetAll(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
-        [FromQuery] string? name = null)
+        [FromQuery] string? name = null,
+        [FromQuery] string? contactPerson = null,
+        [FromQuery] string? phone = null,
+        [FromQuery] string? email = null,
+        [FromQuery] bool? isActive = null)
     {
-        var result = await _service.GetAllAsync(GetUserId(), page, pageSize, name);
+        var result = await _service.GetAllAsync(GetUserId(), page, pageSize, name, contactPerson, phone, email, isActive);
         return Ok(result);
     }
 

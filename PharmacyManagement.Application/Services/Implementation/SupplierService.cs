@@ -37,7 +37,7 @@ public class SupplierService : ISupplierService
         }
     }
 
-    public async Task<PagedResponse<SupplierResponseDto>> GetAllAsync(string userId, int page, int pageSize, string? name)
+    public async Task<PagedResponse<SupplierResponseDto>> GetAllAsync(string userId, int page, int pageSize, string? name, string? contactPerson, string? phone, string? email, bool? isActive)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 10;
@@ -46,6 +46,14 @@ public class SupplierService : ISupplierService
 
         if (!string.IsNullOrWhiteSpace(name))
             query = query.Where(s => s.Name.ToLower().Contains(name.ToLower()));
+        if (!string.IsNullOrWhiteSpace(contactPerson))
+            query = query.Where(s => s.ContactPerson != null && s.ContactPerson.ToLower().Contains(contactPerson.ToLower()));
+        if (!string.IsNullOrWhiteSpace(phone))
+            query = query.Where(s => s.Phone != null && s.Phone.Contains(phone));
+        if (!string.IsNullOrWhiteSpace(email))
+            query = query.Where(s => s.Email != null && s.Email.ToLower().Contains(email.ToLower()));
+        if (isActive.HasValue)
+            query = query.Where(s => s.IsActive == isActive.Value);
 
         var totalRecord = await query.CountAsync();
 

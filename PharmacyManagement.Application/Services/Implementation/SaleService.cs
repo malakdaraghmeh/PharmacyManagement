@@ -60,7 +60,7 @@ return await strategy.ExecuteAsync<ApplicationDbContext, ApiResponse<SaleRespons
 
                 // Fetch available batches for this drug ordered FEFO (First-Expiry-First-Out)
                 var batches = await _dbContext.Set<Batch>()
-                    .Where(b => b.DrugId == drug.Id && b.UserId == userId && b.RemainingQuantity > 0 && !b.IsExpired)
+                    .Where(b => b.DrugId == drug.Id && b.UserId == userId && b.RemainingQuantity > 0 && b.ExpiryDate > DateTime.UtcNow)
                     .OrderBy(b => b.ExpiryDate)
                     .ToListAsync();
 

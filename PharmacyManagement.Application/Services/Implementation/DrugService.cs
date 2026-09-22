@@ -22,10 +22,11 @@ public class DrugService : IDrugService
         _dbContext = dbContext;
     }
 
-    private async Task<Dictionary<string, int>> GetStockByDrugAsync(string userId)
+    private async Task<Dictionary<string, int>> GetStockByDrugAsync()
     {
+        // Only count sellable stock: in-hand quantity that has not expired yet.
         return await _dbContext.Set<Batch>()
-            .Where(b => b.UserId == userId)
+            .Where(b => b.RemainingQuantity > 0 && b.ExpiryDate > DateTime.UtcNow)
             .GroupBy(b => b.DrugId)
             .Select(g => new { DrugId = g.Key, Total = g.Sum(x => x.RemainingQuantity) })
             .ToDictionaryAsync(x => x.DrugId, x => x.Total);
@@ -66,7 +67,7 @@ public class DrugService : IDrugService
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 10;
 
-        var query = _dbContext.Set<Drug>().Where(d => d.UserId == userId);
+        var query = _dbContext.Set<Drug>().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(name))
             query = query.Where(d => d.Name.ToLower().Contains(name.ToLower()));
@@ -85,9 +86,8 @@ public class DrugService : IDrugService
             .Take(pageSize)
             .ToListAsync();
 
-        var stockByDrug = await GetStockByDrugAsync(userId);
+        var stockByDrug = await GetStockByDrugAsync();
         var categories = await _dbContext.Set<Category>()
-            .Where(c => c.UserId == userId)
             .ToDictionaryAsync(c => c.Id, c => c.Name);
 
         var data = drugs.Select(d =>
@@ -122,7 +122,7 @@ public class DrugService : IDrugService
         {
             var drug = await _unitOfWork.Drugs.GetByIdAsync(id);
 
-            if (drug == null || drug.UserId != userId)
+            if (drug == null)
             {
                 return ApiResponse<DrugResponseDto>.ErrorResponse("Drug not found", statusCode: 404);
             }
@@ -146,7 +146,7 @@ public class DrugService : IDrugService
         try
         {
             var drug = await _dbContext.Set<Drug>()
-                .FirstOrDefaultAsync(d => d.Barcode == barcode && d.UserId == userId);
+                .FirstOrDefaultAsync(d => d.Barcode == barcode);
 
             if (drug == null)
             {
@@ -154,7 +154,7 @@ public class DrugService : IDrugService
             }
 
             var batches = await _dbContext.Set<Batch>()
-                .Where(b => b.DrugId == drug.Id && b.RemainingQuantity > 0 && !b.IsExpired)
+                .Where(b => b.DrugId == drug.Id && b.RemainingQuantity > 0 && b.ExpiryDate > DateTime.UtcNow)
                 .OrderBy(b => b.ExpiryDate)
                 .ToListAsync();
 
@@ -263,10 +263,9 @@ public class DrugService : IDrugService
     {
         try
         {
-            var drugs = await _dbContext.Set<Drug>().Where(d => d.UserId == userId).ToListAsync();
-            var stockByDrug = await GetStockByDrugAsync(userId);
+            var drugs = await _dbContext.Set<Drug>().ToListAsync();
+            var stockByDrug = await GetStockByDrugAsync();
             var categories = await _dbContext.Set<Category>()
-                .Where(c => c.UserId == userId)
                 .ToDictionaryAsync(c => c.Id, c => c.Name);
 
             var data = drugs
