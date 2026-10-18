@@ -6,7 +6,9 @@ namespace PharmacyManagement.Application.Services;
 public interface IInventoryService
 {
     Task<ApiResponse<InventorySummaryDto>> GetSummaryAsync(string userId);
-    Task<ApiResponse<List<TopMovingDrugDto>>> GetTopMoversAsync(string userId);
-    Task<ApiResponse<List<InventoryRecommendationDto>>> GetRecommendationsAsync(string userId);
+    Task<PagedResponse<LowStockDto>> GetLowStockItemsAsync(string userId, int page, int pageSize);
+    Task<PagedResponse<ExpiryAlertDto>> GetExpiryAlertsAsync(string userId, int page, int pageSize);
+    Task<PagedResponse<TopMovingDrugDto>> GetTopMoversAsync(string userId, int page, int pageSize);
+    Task<PagedResponse<InventoryRecommendationDto>> GetRecommendationsAsync(string userId, int page, int pageSize);
     Task<ApiResponse<double>> GetRiskScoreAsync(string userId);
 }

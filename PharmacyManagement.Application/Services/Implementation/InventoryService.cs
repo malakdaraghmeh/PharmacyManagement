@@ -55,7 +55,6 @@ public class InventoryService : IInventoryService
                 };
             })
             .OrderByDescending(x => x.TotalSold)
-            .Take(10)
             .ToList();
     }
 
@@ -84,8 +83,6 @@ public class InventoryService : IInventoryService
 
             var lowStock = (await _lowStockService.GetAllAsync(userId)).Data ?? new List<LowStockDto>();
             var expiryAlerts = (await _expiryAlertService.GetAllAsync(userId)).Data ?? new List<ExpiryAlertDto>();
-            var topMovers = await ComputeTopMoversAsync(userId);
-            var recommendations = await ComputeRecommendationsAsync(userId, lowStock, expiryAlerts);
             var riskScore = await ComputeRiskScoreAsync(userId, lowStock, expiryAlerts);
 
             var summary = new InventorySummaryDto
@@ -94,14 +91,12 @@ public class InventoryService : IInventoryService
                 TotalBatches = batches.Count,
                 TotalStockItems = batches.Sum(b => b.RemainingQuantity),
                 TotalInventoryValue = batches.Sum(b => b.RemainingQuantity * b.SellingPrice),
-                LowStockItems = lowStock,
-                ExpiryAlerts = expiryAlerts,
+                LowStockItemsCount = lowStock.Count,
+                ExpiryAlertsCount = expiryAlerts.Count,
                 OutOfStockDrugsCount = lowStock.Count(x => x.Status == LowStockStatus.OUT_OF_STOCK),
                 CriticalAlertsCount = lowStock.Count(x => x.Status == LowStockStatus.CRITICAL)
                     + expiryAlerts.Count(x => x.Status == ExpiryStatus.EXPIRED),
-                InventoryRiskScore = riskScore,
-                TopMovingDrugs = topMovers,
-                RecommendedActions = recommendations
+                InventoryRiskScore = riskScore
             };
 
             return ApiResponse<InventorySummaryDto>.SuccessResponse(summary);
@@ -112,16 +107,30 @@ public class InventoryService : IInventoryService
         }
     }
 
-    public async Task<ApiResponse<List<TopMovingDrugDto>>> GetTopMoversAsync(string userId)
+    private static PagedResponse<T> Paginate<T>(List<T> items, int page, int pageSize)
     {
-        try
-        {
-            return ApiResponse<List<TopMovingDrugDto>>.SuccessResponse(await ComputeTopMoversAsync(userId));
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse<List<TopMovingDrugDto>>.ErrorResponse($"Failed to get top movers: {ex.Message}");
-        }
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+
+        var data = items.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        return PagedResponse<T>.Create(data, page, pageSize, items.Count);
+    }
+
+    public async Task<PagedResponse<LowStockDto>> GetLowStockItemsAsync(string userId, int page, int pageSize)
+    {
+        var lowStock = (await _lowStockService.GetAllAsync(userId)).Data ?? new List<LowStockDto>();
+        return Paginate(lowStock, page, pageSize);
+    }
+
+    public async Task<PagedResponse<ExpiryAlertDto>> GetExpiryAlertsAsync(string userId, int page, int pageSize)
+    {
+        var expiryAlerts = (await _expiryAlertService.GetAllAsync(userId)).Data ?? new List<ExpiryAlertDto>();
+        return Paginate(expiryAlerts, page, pageSize);
+    }
+
+    public async Task<PagedResponse<TopMovingDrugDto>> GetTopMoversAsync(string userId, int page, int pageSize)
+    {
+        return Paginate(await ComputeTopMoversAsync(userId), page, pageSize);
     }
 
     private async Task<List<InventoryRecommendationDto>> ComputeRecommendationsAsync(string userId, List<LowStockDto> lowStock, List<ExpiryAlertDto> expiryAlerts)
@@ -170,19 +179,12 @@ public class InventoryService : IInventoryService
         return recommendations;
     }
 
-    public async Task<ApiResponse<List<InventoryRecommendationDto>>> GetRecommendationsAsync(string userId)
+    public async Task<PagedResponse<InventoryRecommendationDto>> GetRecommendationsAsync(string userId, int page, int pageSize)
     {
-        try
-        {
-            var lowStock = (await _lowStockService.GetAllAsync(userId)).Data ?? new List<LowStockDto>();
-            var expiryAlerts = (await _expiryAlertService.GetAllAsync(userId)).Data ?? new List<ExpiryAlertDto>();
-            var recommendations = await ComputeRecommendationsAsync(userId, lowStock, expiryAlerts);
-            return ApiResponse<List<InventoryRecommendationDto>>.SuccessResponse(recommendations);
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse<List<InventoryRecommendationDto>>.ErrorResponse($"Failed to get recommendations: {ex.Message}");
-        }
+        var lowStock = (await _lowStockService.GetAllAsync(userId)).Data ?? new List<LowStockDto>();
+        var expiryAlerts = (await _expiryAlertService.GetAllAsync(userId)).Data ?? new List<ExpiryAlertDto>();
+        var recommendations = await ComputeRecommendationsAsync(userId, lowStock, expiryAlerts);
+        return Paginate(recommendations, page, pageSize);
     }
 
     public async Task<ApiResponse<double>> GetRiskScoreAsync(string userId)

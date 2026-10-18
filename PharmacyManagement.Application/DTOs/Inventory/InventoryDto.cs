@@ -60,11 +60,9 @@ public class InventorySummaryDto
     public int TotalBatches { get; set; }
     public int TotalStockItems { get; set; }
     public decimal TotalInventoryValue { get; set; }
-    public List<LowStockDto> LowStockItems { get; set; } = new();
-    public List<ExpiryAlertDto> ExpiryAlerts { get; set; } = new();
+    public int LowStockItemsCount { get; set; }
+    public int ExpiryAlertsCount { get; set; }
     public int OutOfStockDrugsCount { get; set; }
     public int CriticalAlertsCount { get; set; }
     public double InventoryRiskScore { get; set; }
-    public List<TopMovingDrugDto> TopMovingDrugs { get; set; } = new();
-    public List<InventoryRecommendationDto> RecommendedActions { get; set; } = new();
 }

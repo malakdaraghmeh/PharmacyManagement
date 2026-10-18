@@ -67,7 +67,7 @@ public class DrugService : IDrugService
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 10;
 
-        var query = _dbContext.Set<Drug>().AsQueryable();
+        var query = _dbContext.Set<Drug>().Where(d => d.UserId == userId);
 
         if (!string.IsNullOrWhiteSpace(name))
             query = query.Where(d => d.Name.ToLower().Contains(name.ToLower()));
@@ -122,7 +122,7 @@ public class DrugService : IDrugService
         {
             var drug = await _unitOfWork.Drugs.GetByIdAsync(id);
 
-            if (drug == null)
+            if (drug == null || drug.UserId != userId)
             {
                 return ApiResponse<DrugResponseDto>.ErrorResponse("Drug not found", statusCode: 404);
             }
@@ -146,7 +146,7 @@ public class DrugService : IDrugService
         try
         {
             var drug = await _dbContext.Set<Drug>()
-                .FirstOrDefaultAsync(d => d.Barcode == barcode);
+                .FirstOrDefaultAsync(d => d.Barcode == barcode && d.UserId == userId);
 
             if (drug == null)
             {
@@ -263,7 +263,7 @@ public class DrugService : IDrugService
     {
         try
         {
-            var drugs = await _dbContext.Set<Drug>().ToListAsync();
+            var drugs = await _dbContext.Set<Drug>().Where(d => d.UserId == userId).ToListAsync();
             var stockByDrug = await GetStockByDrugAsync();
             var categories = await _dbContext.Set<Category>()
                 .ToDictionaryAsync(c => c.Id, c => c.Name);

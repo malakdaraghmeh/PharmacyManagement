@@ -26,17 +26,31 @@ public class InventoryController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("top-movers")]
-    public async Task<IActionResult> GetTopMovers()
+    [HttpGet("low-stock")]
+    public async Task<IActionResult> GetLowStockItems([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var result = await _service.GetTopMoversAsync(GetUserId());
+        var result = await _service.GetLowStockItemsAsync(GetUserId(), page, pageSize);
+        return Ok(result);
+    }
+
+    [HttpGet("expiry-alerts")]
+    public async Task<IActionResult> GetExpiryAlerts([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    {
+        var result = await _service.GetExpiryAlertsAsync(GetUserId(), page, pageSize);
+        return Ok(result);
+    }
+
+    [HttpGet("top-movers")]
+    public async Task<IActionResult> GetTopMovers([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    {
+        var result = await _service.GetTopMoversAsync(GetUserId(), page, pageSize);
         return Ok(result);
     }
 
     [HttpGet("recommendations")]
-    public async Task<IActionResult> GetRecommendations()
+    public async Task<IActionResult> GetRecommendations([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var result = await _service.GetRecommendationsAsync(GetUserId());
+        var result = await _service.GetRecommendationsAsync(GetUserId(), page, pageSize);
         return Ok(result);
     }
 
